@@ -48,7 +48,7 @@ it("useStaleRefresh hook runs correctly", async () => {
   });
   expect(container.textContent).toBe("loading");
 
-  await sleep(500);
+  await act(() => sleep(500));
   expect(container.textContent).toBe("url1");
 });
 
