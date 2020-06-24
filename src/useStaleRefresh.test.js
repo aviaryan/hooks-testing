@@ -16,6 +16,10 @@ function fetchMock(url, suffix = "") {
   );
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 beforeAll(() => {
   jest.spyOn(global, "fetch").mockImplementation(fetchMock);
 });
@@ -38,11 +42,14 @@ afterEach(() => {
   container = null;
 });
 
-it("useStaleRefresh hook runs correctly", () => {
+it("useStaleRefresh hook runs correctly", async () => {
   act(() => {
     render(<TestComponent url="url1" />, container);
   });
   expect(container.textContent).toBe("loading");
+
+  await sleep(500);
+  expect(container.textContent).toBe("url1");
 });
 
 // NOTE: why this? because other this object will change on every render
