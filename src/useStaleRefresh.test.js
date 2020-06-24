@@ -50,6 +50,33 @@ it("useStaleRefresh hook runs correctly", async () => {
 
   await act(() => sleep(500));
   expect(container.textContent).toBe("url1");
+
+  act(() => {
+    render(<TestComponent url="url2" />, container);
+  });
+  expect(container.textContent).toContain("loading");
+
+  await act(() => sleep(500));
+  expect(container.textContent).toBe("url2");
+
+  // new response
+  global.fetch.mockImplementation((url) => fetchMock(url, "__"));
+
+  // set url to url1 again
+  act(() => {
+    render(<TestComponent url="url1" />, container);
+  });
+  expect(container.textContent).toBe("url1");
+  await act(() => sleep(500));
+  expect(container.textContent).toBe("url1__");
+
+  // set url to url2 again
+  act(() => {
+    render(<TestComponent url="url2" />, container);
+  });
+  expect(container.textContent).toBe("url2");
+  await act(() => sleep(500));
+  expect(container.textContent).toBe("url2__");
 });
 
 // NOTE: why this? because other this object will change on every render
