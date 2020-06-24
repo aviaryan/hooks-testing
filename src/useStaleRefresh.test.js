@@ -3,8 +3,6 @@ import { render, unmountComponentAtNode } from "react-dom";
 import { act } from "react-dom/test-utils";
 import useStaleRefresh from "./useStaleRefresh";
 
-let result;
-
 function fetchMock(url, suffix = "") {
   return new Promise((resolve) =>
     setTimeout(() => {
@@ -67,26 +65,47 @@ afterEach(() => {
   container = null;
 });
 
+function renderHook(hook, args) {
+  let result = {};
+
+  function TestComponent({ hookArgs }) {
+    result.current = hook(...hookArgs);
+    return null;
+  }
+
+  function rerender(args) {
+    act(() => {
+      render(<TestComponent hookArgs={args} />, container);
+    });
+  }
+
+  rerender(args);
+  return { result, rerender };
+}
+
 it("useStaleRefresh hook runs correctly", async () => {
-  act(() => {
-    render(<TestComponent url="url1" />, container);
-  });
-  expect(result[1]).toBe(true);
+  const defaultValue = {
+    data: "",
+  };
+
+  const { rerender, result } = renderHook(useStaleRefresh, [
+    "url1",
+    defaultValue,
+  ]);
+  expect(result.current[1]).toBe(true);
 
   await act(() =>
     waitFor(() => {
-      expect(result[0].data).toBe("url1");
+      expect(result.current[0].data).toBe("url1");
     })
   );
 
-  act(() => {
-    render(<TestComponent url="url2" />, container);
-  });
-  expect(result[1]).toBe(true);
+  rerender(["url2", defaultValue]);
+  expect(result.current[1]).toBe(true);
 
   await act(() =>
     waitFor(() => {
-      expect(result[0].data).toBe("url2");
+      expect(result.current[0].data).toBe("url2");
     })
   );
 
@@ -94,32 +113,20 @@ it("useStaleRefresh hook runs correctly", async () => {
   global.fetch.mockImplementation((url) => fetchMock(url, "__"));
 
   // set url to url1 again
-  act(() => {
-    render(<TestComponent url="url1" />, container);
-  });
-  expect(result[0].data).toBe("url1");
+  rerender(["url1", defaultValue]);
+  expect(result.current[0].data).toBe("url1");
   await act(() =>
     waitFor(() => {
-      expect(result[0].data).toBe("url1__");
+      expect(result.current[0].data).toBe("url1__");
     })
   );
 
   // set url to url2 again
-  act(() => {
-    render(<TestComponent url="url2" />, container);
-  });
-  expect(result[0].data).toBe("url2");
+  rerender(["url2", defaultValue]);
+  expect(result.current[0].data).toBe("url2");
   await act(() =>
     waitFor(() => {
-      expect(result[0].data).toBe("url2__");
+      expect(result.current[0].data).toBe("url2__");
     })
   );
 });
-
-// NOTE: why this? because other this object will change on every render
-const defaultValue = { data: "" };
-
-function TestComponent({ url }) {
-  result = useStaleRefresh(url, defaultValue);
-  return null;
-}
