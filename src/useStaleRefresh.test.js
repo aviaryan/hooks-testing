@@ -3,6 +3,8 @@ import { render, unmountComponentAtNode } from "react-dom";
 import { act } from "react-dom/test-utils";
 import useStaleRefresh from "./useStaleRefresh";
 
+let result;
+
 function fetchMock(url, suffix = "") {
   return new Promise((resolve) =>
     setTimeout(() => {
@@ -69,36 +71,36 @@ it("useStaleRefresh hook runs correctly", async () => {
   act(() => {
     render(<TestComponent url="url1" />, container);
   });
-  expect(container.textContent).toBe("loading");
+  expect(result[1]).toBe(true);
 
   await act(() =>
     waitFor(() => {
-      expect(container.textContent).toBe("url1");
+      expect(result[0].data).toBe("url1");
     })
   );
 
   act(() => {
     render(<TestComponent url="url2" />, container);
   });
-  expect(container.textContent).toContain("loading");
+  expect(result[1]).toBe(true);
 
   await act(() =>
     waitFor(() => {
-      expect(container.textContent).toBe("url2");
+      expect(result[0].data).toBe("url2");
     })
   );
 
-  // new response
+  // new result
   global.fetch.mockImplementation((url) => fetchMock(url, "__"));
 
   // set url to url1 again
   act(() => {
     render(<TestComponent url="url1" />, container);
   });
-  expect(container.textContent).toBe("url1");
+  expect(result[0].data).toBe("url1");
   await act(() =>
     waitFor(() => {
-      expect(container.textContent).toBe("url1__");
+      expect(result[0].data).toBe("url1__");
     })
   );
 
@@ -106,10 +108,10 @@ it("useStaleRefresh hook runs correctly", async () => {
   act(() => {
     render(<TestComponent url="url2" />, container);
   });
-  expect(container.textContent).toBe("url2");
+  expect(result[0].data).toBe("url2");
   await act(() =>
     waitFor(() => {
-      expect(container.textContent).toBe("url2__");
+      expect(result[0].data).toBe("url2__");
     })
   );
 });
@@ -118,9 +120,6 @@ it("useStaleRefresh hook runs correctly", async () => {
 const defaultValue = { data: "" };
 
 function TestComponent({ url }) {
-  const [data, isLoading] = useStaleRefresh(url, defaultValue);
-  if (isLoading) {
-    return <div>loading</div>;
-  }
-  return <div>{data.data}</div>;
+  result = useStaleRefresh(url, defaultValue);
+  return null;
 }
