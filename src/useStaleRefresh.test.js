@@ -20,6 +20,29 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function waitFor(cb, timeout = 500) {
+  const step = 10;
+  let timeSpent = 0;
+  let timedOut = false;
+
+  while (true) {
+    try {
+      await sleep(step);
+      timeSpent += step;
+      cb();
+      break;
+    } catch {}
+    if (timeSpent >= timeout) {
+      timedOut = true;
+      break;
+    }
+  }
+
+  if (timedOut) {
+    throw new Error("timeout");
+  }
+}
+
 beforeAll(() => {
   jest.spyOn(global, "fetch").mockImplementation(fetchMock);
 });
@@ -48,16 +71,22 @@ it("useStaleRefresh hook runs correctly", async () => {
   });
   expect(container.textContent).toBe("loading");
 
-  await act(() => sleep(500));
-  expect(container.textContent).toBe("url1");
+  await act(() =>
+    waitFor(() => {
+      expect(container.textContent).toBe("url1");
+    })
+  );
 
   act(() => {
     render(<TestComponent url="url2" />, container);
   });
   expect(container.textContent).toContain("loading");
 
-  await act(() => sleep(500));
-  expect(container.textContent).toBe("url2");
+  await act(() =>
+    waitFor(() => {
+      expect(container.textContent).toBe("url2");
+    })
+  );
 
   // new response
   global.fetch.mockImplementation((url) => fetchMock(url, "__"));
@@ -67,16 +96,22 @@ it("useStaleRefresh hook runs correctly", async () => {
     render(<TestComponent url="url1" />, container);
   });
   expect(container.textContent).toBe("url1");
-  await act(() => sleep(500));
-  expect(container.textContent).toBe("url1__");
+  await act(() =>
+    waitFor(() => {
+      expect(container.textContent).toBe("url1__");
+    })
+  );
 
   // set url to url2 again
   act(() => {
     render(<TestComponent url="url2" />, container);
   });
   expect(container.textContent).toBe("url2");
-  await act(() => sleep(500));
-  expect(container.textContent).toBe("url2__");
+  await act(() =>
+    waitFor(() => {
+      expect(container.textContent).toBe("url2__");
+    })
+  );
 });
 
 // NOTE: why this? because other this object will change on every render
